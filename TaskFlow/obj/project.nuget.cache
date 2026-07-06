@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "/kHUDi1fXBc=",
+  "success": true,
+  "projectFilePath": "/workspaces/taskflow-dotnet/TaskFlow/TaskFlow.csproj",
+  "expectedPackageFiles": [
+    "/home/codespace/.nuget/packages/microsoft.aspnetcore.openapi/8.0.0/microsoft.aspnetcore.openapi.8.0.0.nupkg.sha512",
+    "/home/codespace/.nuget/packages/microsoft.openapi/1.4.3/microsoft.openapi.1.4.3.nupkg.sha512"
+  ],
+  "logs": []
+}
