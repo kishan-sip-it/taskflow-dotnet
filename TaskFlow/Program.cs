@@ -1,33 +1,82 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http.Json;
 using TaskFlow.Data;
-using TaskFlow.Services;;
-
+using TaskFlow.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Controllers add kiye
+// Add CORS Policy
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", builder =>
+    {
+        builder.AllowAnyOrigin()
+               .AllowAnyMethod()
+               .AllowAnyHeader();
+    });
+});
+
 builder.Services.AddControllers();
 
+builder.Services.Configure<JsonOptions>(options =>
+{
+    options.SerializerOptions.WriteIndented = true;
+});
 
-// 2. Database Connection (SQLite)
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite("Data Source=taskmaster.db")); // Ye file automatically ban jayegi
-    builder.Services.AddScoped<ITaskService, TaskService>();
+    options.UseSqlite("Data Source=taskmaster.db"));
 
-// 3. Swagger/OpenAPI for testing
+builder.Services.AddScoped<ITaskService, TaskService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? "DefaultKey123456789012345678901234"))
+        };
+    });
+
+builder.Services.AddAuthorization();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(); // Simple version
 
 var app = builder.Build();
 
-// Database ko automatically create kar do agar exist nahi karta
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.EnsureCreated(); // Ye line DB file create karti hai
+    db.Database.EnsureCreated();
+    
+    if (!db.Users.Any())
+    {
+        var adminUser = new TaskFlow.Models.User
+        {
+            Username = "admin",
+            PasswordHash = Convert.ToBase64String(
+                System.Security.Cryptography.SHA256.HashData(
+                    System.Text.Encoding.UTF8.GetBytes("admin123")))
+        };
+        db.Users.Add(adminUser);
+        db.SaveChanges();
+    }
 }
 
-// Swagger setup
+app.UseCors("AllowAll");
+app.UseAuthentication();
+app.UseAuthorization();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -35,7 +84,5 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseAuthorization();
 app.MapControllers();
-
 app.Run();

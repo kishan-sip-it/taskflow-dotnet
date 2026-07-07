@@ -11,4 +11,5 @@ public class AppDbContext : DbContext
 
     // Ye teri Table banegi jiska naam 'Tasks' hoga
     public DbSet<TaskItem> Tasks { get; set; }
+    public DbSet<User> Users { get; set; }
 }

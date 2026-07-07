@@ -150,3 +150,12 @@
 /workspaces/taskflow-dotnet/TaskFlow/bin/Debug/net10.0/runtimes/win-arm64/native/e_sqlite3.dll
 /workspaces/taskflow-dotnet/TaskFlow/bin/Debug/net10.0/runtimes/win-x64/native/e_sqlite3.dll
 /workspaces/taskflow-dotnet/TaskFlow/bin/Debug/net10.0/runtimes/win-x86/native/e_sqlite3.dll
+/workspaces/taskflow-dotnet/TaskFlow/bin/Debug/net10.0/Microsoft.AspNetCore.Authentication.JwtBearer.dll
+/workspaces/taskflow-dotnet/TaskFlow/bin/Debug/net10.0/Microsoft.Bcl.Cryptography.dll
+/workspaces/taskflow-dotnet/TaskFlow/bin/Debug/net10.0/Microsoft.IdentityModel.Abstractions.dll
+/workspaces/taskflow-dotnet/TaskFlow/bin/Debug/net10.0/Microsoft.IdentityModel.JsonWebTokens.dll
+/workspaces/taskflow-dotnet/TaskFlow/bin/Debug/net10.0/Microsoft.IdentityModel.Logging.dll
+/workspaces/taskflow-dotnet/TaskFlow/bin/Debug/net10.0/Microsoft.IdentityModel.Protocols.dll
+/workspaces/taskflow-dotnet/TaskFlow/bin/Debug/net10.0/Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
+/workspaces/taskflow-dotnet/TaskFlow/bin/Debug/net10.0/Microsoft.IdentityModel.Tokens.dll
+/workspaces/taskflow-dotnet/TaskFlow/bin/Debug/net10.0/System.IdentityModel.Tokens.Jwt.dll
