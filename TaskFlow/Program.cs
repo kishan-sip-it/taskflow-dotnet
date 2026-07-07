@@ -1,14 +1,18 @@
 using Microsoft.EntityFrameworkCore;
 using TaskFlow.Data;
+using TaskFlow.Services;;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
 // 1. Controllers add kiye
 builder.Services.AddControllers();
 
+
 // 2. Database Connection (SQLite)
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite("Data Source=taskmaster.db")); // Ye file automatically ban jayegi
+    builder.Services.AddScoped<ITaskService, TaskService>();
 
 // 3. Swagger/OpenAPI for testing
 builder.Services.AddEndpointsApiExplorer();

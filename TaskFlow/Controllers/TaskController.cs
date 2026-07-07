@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using TaskFlow.Services;
+using TaskFlow.Models;
 
 namespace TaskFlow.Controllers;
 
@@ -6,56 +8,47 @@ namespace TaskFlow.Controllers;
 [Route("api/[controller]")]
 public class TaskController : ControllerBase
 {
-    private static List<TaskItem> _tasks = new List<TaskItem>
+    private readonly ITaskService _taskService;
+
+    public TaskController(ITaskService taskService)
     {
-        new TaskItem { Id = 1, Title = "Learn .NET", Status = "In Progress" },
-        new TaskItem { Id = 2, Title = "Build API",  Status = "Pending" },
-        new TaskItem { Id = 3, Title = "Deploy App", Status = "Pending" }
-    };
+        _taskService = taskService;
+    }
 
     [HttpGet]
-    public IActionResult GetAll() => Ok(_tasks);
+    public async Task<ActionResult<IEnumerable<TaskItem>>> GetTasks()
+    {
+        return Ok(await _taskService.GetAllTasksAsync());
+    }
 
     [HttpGet("{id}")]
-    public IActionResult GetById(int id)
+    public async Task<ActionResult<TaskItem>> GetTask(int id)
     {
-        var task = _tasks.FirstOrDefault(t => t.Id == id);
-        if (task == null) return NotFound(new { message = $"Task {id} not found" });
+        var task = await _taskService.GetTaskByIdAsync(id);
+        if (task == null) return NotFound();
         return Ok(task);
     }
 
     [HttpPost]
-    public IActionResult Create([FromBody] TaskItem newTask)
+    public async Task<ActionResult<TaskItem>> CreateTask(TaskItem task)
     {
-        newTask.Id = _tasks.Count + 1;
-        newTask.Status = "Pending";
-        _tasks.Add(newTask);
-        return Ok(newTask);
+        var createdTask = await _taskService.CreateTaskAsync(task);
+        return CreatedAtAction(nameof(GetTask), new { id = createdTask.Id }, createdTask);
     }
 
     [HttpPut("{id}")]
-    public IActionResult Update(int id, [FromBody] TaskItem updated)
+    public async Task<IActionResult> UpdateTask(int id, TaskItem task)
     {
-        var task = _tasks.FirstOrDefault(t => t.Id == id);
-        if (task == null) return NotFound(new { message = $"Task {id} not found" });
-        task.Title = updated.Title;
-        task.Status = updated.Status;
-        return Ok(task);
+        var updatedTask = await _taskService.UpdateTaskAsync(id, task);
+        if (updatedTask == null) return NotFound();
+        return NoContent();
     }
 
     [HttpDelete("{id}")]
-    public IActionResult Delete(int id)
+    public async Task<IActionResult> DeleteTask(int id)
     {
-        var task = _tasks.FirstOrDefault(t => t.Id == id);
-        if (task == null) return NotFound(new { message = $"Task {id} not found" });
-        _tasks.Remove(task);
-        return Ok(new { message = $"Task {id} deleted" });
+        var deleted = await _taskService.DeleteTaskAsync(id);
+        if (!deleted) return NotFound();
+        return NoContent();
     }
-}
-
-public class TaskItem
-{
-    public int Id { get; set; }
-    public string Title { get; set; }
-    public string Status { get; set; }
 }
