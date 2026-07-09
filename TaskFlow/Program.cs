@@ -9,13 +9,16 @@ using TaskFlow.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add CORS Policy
+// CORS Configuration - Allow Everything for Development
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", builder =>
     {
-        builder.AllowAnyOrigin()
-               .AllowAnyMethod()
-               .AllowAnyHeader();
+        builder
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .WithExposedHeaders("Authorization", "Content-Type");
     });
 });
 
@@ -31,6 +34,18 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+// CORS Policy - Start mein add kar
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", builder =>
+    {
+        builder
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .WithExposedHeaders("Authorization");
+    });
+});
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -59,18 +74,24 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated();
     
-    if (!db.Users.Any())
-    {
-        var adminUser = new TaskFlow.Models.User
-        {
-            Username = "admin",
-            PasswordHash = Convert.ToBase64String(
-                System.Security.Cryptography.SHA256.HashData(
-                    System.Text.Encoding.UTF8.GetBytes("admin123")))
-        };
-        db.Users.Add(adminUser);
-        db.SaveChanges();
-    }
+    // Purana admin user delete kar aur naya bana
+var existingAdmin = db.Users.FirstOrDefault(u => u.Username == "admin");
+if (existingAdmin != null)
+{
+    db.Users.Remove(existingAdmin);
+    db.SaveChanges();
+}
+
+var adminUser = new TaskFlow.Models.User
+{
+    Username = "admin",
+    PasswordHash = Convert.ToBase64String(
+        System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes("admin123")))
+};
+db.Users.Add(adminUser);
+db.SaveChanges();
+Console.WriteLine("✅ Admin user created! Username: admin, Password: admin123");
 }
 
 app.UseCors("AllowAll");
