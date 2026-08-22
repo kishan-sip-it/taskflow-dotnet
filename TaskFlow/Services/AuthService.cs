@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using TaskFlow.Data;
 using TaskFlow.Models;
+using BCryptNet = global::BCrypt.Net.BCrypt;
 
 namespace TaskFlow.Services;
 
@@ -28,7 +29,7 @@ public class AuthService : IAuthService
         if (usernameExists)
             throw new InvalidOperationException("Username already exists.");
 
-        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(user.PasswordHash);
+        user.PasswordHash = BCryptNet.HashPassword(user.PasswordHash);
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
@@ -38,7 +39,7 @@ public class AuthService : IAuthService
     public async Task<string?> LoginAsync(string username, string password)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
-        if (user == null || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
+        if (user == null || !BCryptNet.Verify(password, user.PasswordHash))
             return null;
 
         var key = _config["Jwt:Key"];
