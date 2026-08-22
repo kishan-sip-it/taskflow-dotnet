@@ -11,7 +11,6 @@ A full-stack task management application built with ASP.NET Core, C#, Entity Fra
 - Entity Framework Core with SQLite persistence
 - Swagger/OpenAPI for API exploration and testing
 - Configurable CORS for frontend integration
-- React frontend in `frontend/`
 
 ## Architecture
 
@@ -152,6 +151,10 @@ Create example:
 ## Next Extensions
 
 Good next steps include per-user task ownership, pagination/filtering, request DTOs, automated integration tests, refresh tokens, and a production database such as PostgreSQL or SQL Server.
+
+## CI
+
+The repository runs automated backend and frontend build checks through GitHub Actions.
 
 ## Author
 
