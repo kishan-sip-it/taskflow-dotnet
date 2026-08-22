@@ -1,0 +1,42 @@
+# Build output
+**/bin/
+**/obj/
+
+# Visual Studio
+.vs/
+*.user
+*.userosscache
+*.suo
+*.rsuser
+
+# Rider / ReSharper
+.idea/
+_ReSharper*/
+*.DotSettings.user
+
+# Test / coverage
+TestResults/
+coverage/
+*.coverage
+
+# Local database files
+*.db
+*.db-shm
+*.db-wal
+
+# Local environment / secrets
+.env
+.env.*
+!.env.example
+appsettings.Local.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node frontend artifacts
+node_modules/
+frontend/dist/
+frontend/.next/
+frontend/.env*
+!frontend/.env.example
