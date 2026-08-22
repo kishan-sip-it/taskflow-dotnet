@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using BCrypt.Net;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using TaskFlow.Data;
@@ -11,7 +12,7 @@ namespace TaskFlow.Services;
 public class AuthService : IAuthService
 {
     private readonly AppDbContext _context;
-    private readonly IConfiguration _config; // Secret key yahan se aayegi
+    private readonly IConfiguration _config;
 
     public AuthService(AppDbContext context, IConfiguration config)
     {
@@ -21,33 +22,34 @@ public class AuthService : IAuthService
 
     public async Task<string> RegisterAsync(User user)
     {
-        // Simple password hashing (Real world mein BCrypt use karo)
-        user.PasswordHash = Convert.ToBase64String(
-            System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(user.PasswordHash))
-        );
+        if (string.IsNullOrWhiteSpace(user.Username) || string.IsNullOrWhiteSpace(user.PasswordHash))
+            throw new ArgumentException("Username and password are required.");
 
+        var usernameExists = await _context.Users.AnyAsync(u => u.Username == user.Username);
+        if (usernameExists)
+            throw new InvalidOperationException("Username already exists.");
+
+        user.PasswordHash = BCrypt.HashPassword(user.PasswordHash);
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
+
         return "User registered successfully!";
     }
 
     public async Task<string?> LoginAsync(string username, string password)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
-        if (user == null) return null;
+        if (user == null || !BCrypt.Verify(password, user.PasswordHash)) return null;
 
-        // Password check
-        var hashedPassword = Convert.ToBase64String(
-            System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(password))
-        );
+        var key = _config["Jwt:Key"];
+        if (string.IsNullOrWhiteSpace(key) || key.Length < 32)
+            throw new InvalidOperationException("JWT key must be configured and at least 32 characters long.");
 
-        if (user.PasswordHash != hashedPassword) return null;
-
-        // 🔥 JWT TOKEN GENERATE KARNA
-        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
+        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
-        var claims = new[] {
+        var claims = new[]
+        {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Name, user.Username)
         };
@@ -56,9 +58,8 @@ public class AuthService : IAuthService
             issuer: _config["Jwt:Issuer"],
             audience: _config["Jwt:Audience"],
             claims: claims,
-            expires: DateTime.Now.AddHours(1), // 1 ghante baad token expire
-            signingCredentials: credentials
-        );
+            expires: DateTime.UtcNow.AddHours(1),
+            signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
