@@ -1,7 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using BCrypt.Net;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using TaskFlow.Data;
@@ -29,7 +28,7 @@ public class AuthService : IAuthService
         if (usernameExists)
             throw new InvalidOperationException("Username already exists.");
 
-        user.PasswordHash = BCrypt.HashPassword(user.PasswordHash);
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(user.PasswordHash);
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
@@ -39,11 +38,17 @@ public class AuthService : IAuthService
     public async Task<string?> LoginAsync(string username, string password)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
-        if (user == null || !BCrypt.Verify(password, user.PasswordHash)) return null;
+        if (user == null || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
+            return null;
 
         var key = _config["Jwt:Key"];
         if (string.IsNullOrWhiteSpace(key) || key.Length < 32)
             throw new InvalidOperationException("JWT key must be configured and at least 32 characters long.");
+
+        var issuer = _config["Jwt:Issuer"];
+        var audience = _config["Jwt:Audience"];
+        if (string.IsNullOrWhiteSpace(issuer) || string.IsNullOrWhiteSpace(audience))
+            throw new InvalidOperationException("JWT issuer and audience must be configured.");
 
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
@@ -55,8 +60,8 @@ public class AuthService : IAuthService
         };
 
         var token = new JwtSecurityToken(
-            issuer: _config["Jwt:Issuer"],
-            audience: _config["Jwt:Audience"],
+            issuer: issuer,
+            audience: audience,
             claims: claims,
             expires: DateTime.UtcNow.AddHours(1),
             signingCredentials: credentials);
