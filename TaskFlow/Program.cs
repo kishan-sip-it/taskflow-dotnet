@@ -1,21 +1,22 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Http.Json;
 using TaskFlow.Data;
 using TaskFlow.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. CORS - SIRF EK BAAR (Fixed)
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddPolicy("Frontend", policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+        if (origins.Length > 0)
+            policy.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
+        else
+            policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
     });
 });
 
@@ -26,7 +27,10 @@ builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite("Data S
 builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
-// JWT Auth
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32)
+    throw new InvalidOperationException("Configure Jwt:Key with a secret of at least 32 characters.");
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -38,8 +42,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? "DefaultKey123456789012345678901234"))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+            ClockSkew = TimeSpan.FromSeconds(30)
         };
     });
 
@@ -49,30 +53,7 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Database Seed (Admin User)
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.EnsureCreated();
-    
-    var existingAdmin = db.Users.FirstOrDefault(u => u.Username == "admin");
-    if (existingAdmin != null) db.Users.Remove(existingAdmin);
-
-    db.Users.Add(new TaskFlow.Models.User
-    {
-        Username = "admin",
-        PasswordHash = Convert.ToBase64String(
-            System.Security.Cryptography.SHA256.HashData(
-                System.Text.Encoding.UTF8.GetBytes("admin123")))
-    });
-    db.SaveChanges();
-    Console.WriteLine("✅ Admin user created: admin / admin123");
-}
-
-// 2. MIDDLEWARE ORDER (Fixed for Codespaces)
-app.UseCors("AllowAll"); 
-// app.UseHttpsRedirection(); // <--- YE HATA DIYA (Codespaces mein ye error deta hai)
-
+app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
